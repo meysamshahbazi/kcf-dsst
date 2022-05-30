@@ -2,7 +2,7 @@
 cmake_minimum_required(VERSION 3.1)
 
 # Define project name
-project(kcf)
+project(kcf-dsst)
 
 # Find OpenCV, you may need to set OpenCV_DIR variable
 # to the absolute path to the directory containing OpenCVConfig.cmake file
@@ -20,7 +20,7 @@ message(STATUS "    libraries: ${OpenCV_LIBS}")
 message(STATUS "    include path: ${OpenCV_INCLUDE_DIRS}")
 
 # Declare the executable target built from your sources
-add_executable(${PROJECT_NAME} main.cpp)
+add_executable(${PROJECT_NAME} main.cpp dsst.cpp)
 
 # Link your application with OpenCV libraries
 target_link_libraries(${PROJECT_NAME} PRIVATE ${OpenCV_LIBS})
