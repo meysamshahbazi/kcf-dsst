@@ -7,6 +7,11 @@
 
 #include <iostream>
 #include <cstring>
+
+#include "utils.hpp"
+
+#include <opencv2/objdetect.hpp>
+
 //  #include "samples_utility.hpp"
 
 using namespace std;
@@ -15,6 +20,9 @@ using namespace cv;
 // prototype of the functino for feature extractor
 void sobelExtractor(const Mat img, const Rect roi, Mat& feat);
 void lbpExtractor(const Mat img,const Rect roi, Mat & feat);
+void hogExtractor(const Mat img,const Rect roi, Mat & feat);
+
+void computeHOGs( const Size wsize, const vector< Mat > & img_lst, vector< Mat > & gradient_lst, bool use_flip );
 
 template <typename _Tp>
 void OLBP_(const Mat& src, Mat& dst);
@@ -50,7 +58,7 @@ int main( int argc, char** argv ){
     param.wrap_kernel= false;             //!<  wrap around the kernel values
     param.compress_feature  = false;        //!<  activate the pca method to compress the features
     // int 
-    param.max_patch_size = 80*80;  //80*80         //!<  threshold for the ROI size
+    param.max_patch_size = 20*20;  //80*80         //!<  threshold for the ROI size
     param.compressed_size = 1;          //!<  feature size after compression
     param.desc_pca  = TrackerKCF::MODE::GRAY;        //!<  compressed descriptors of TrackerKCF::MODE
     param.desc_npca = TrackerKCF::MODE::CUSTOM;       //!<  non-compressed descriptors of TrackerKCF::MODE
@@ -58,7 +66,7 @@ int main( int argc, char** argv ){
     // create a tracker object
     Ptr<TrackerKCF> tracker = TrackerKCF::create(param);
 
-    tracker->setFeatureExtractor(lbpExtractor,false);
+    tracker->setFeatureExtractor(hogExtractor,false);
 
     // set input video
     std::string video = argv[1];
@@ -66,14 +74,19 @@ int main( int argc, char** argv ){
 
     // get bounding box
     cap >> frame;
-    // roi=selectROI("tracker",frame);
-    roi = Rect(330,277,363-330,292-277);
+    roi=selectROI("tracker",frame);
+
+    // Mat patch = get_subwindow(frame,Point2f(roi.x+roi.width/2,roi.y+roi.height/2) ,roi.width, roi.height,NULL);
+
+    // roi = Rect(330,277,363-330,292-277);
 
     // Mat patch = frame(roi).clone();
     // cout<<"ROI "<<roi.size()<<endl;
     // cout<<"Patch "<<patch.size()<< endl;
     rectangle( frame, roi, Scalar( 255, 0, 0 ), 2, 1 );
     imshow("tracker",frame);
+        // imshow("patch",patch);
+
     waitKey(0);
 
     //quit if ROI was not selected
@@ -159,6 +172,87 @@ void sobelExtractor(const Mat img, const Rect roi, Mat& feat){
     std::cout<<sobel[0].size()<<endl;
     feat=feat/255.0-0.5; // normalize to range -0.5 .. 0.5
 }
+
+void hogExtractor(const Mat img,const Rect roi, Mat & feat)
+{
+    Mat patch;
+    Rect region=roi;
+
+    vector<Mat> features;
+
+    const int bin_size = 4;
+    
+
+    // extract patch inside the image
+    if(roi.x<0){region.x=0;region.width+=roi.x;}
+    if(roi.y<0){region.y=0;region.height+=roi.y;}
+    if(roi.x+roi.width>img.cols)region.width=img.cols-roi.x;
+    if(roi.y+roi.height>img.rows)region.height=img.rows-roi.y;
+    if(region.width>img.cols)region.width=img.cols;
+    if(region.height>img.rows)region.height=img.rows;
+
+    patch = img(region).clone();
+    
+
+
+    patch.convertTo(patch, CV_64FC3, 1.0/255.0);
+    
+    Mat hogmatrix;
+
+    computeHOG32D(patch,hogmatrix, bin_size, 1,1);
+
+
+    hogmatrix.convertTo(hogmatrix, CV_32F);
+    Size hog_size = patch.size();
+    // cout<<"hog_size"<<hog_size<<endl;
+    hog_size.width /= bin_size;
+    hog_size.height /= bin_size;
+    Mat hogc(hog_size, CV_32FC(32), hogmatrix.data); //#MEYSHA: change this constant number 
+    //  std::cout<<"hogc: "<<hogc.rows<<"|"<<hogc.cols<<" - "<<hogc.channels() <<std::endl;
+    // std::vector<Mat> features;
+    std::vector<Mat> hog_vec;
+    split(hogc, hog_vec);
+
+    features.insert(features.end(), hog_vec.begin(),
+        hog_vec.begin()+8);
+    
+
+    merge(features,feat);
+
+}
+
+
+void computeHOGs( const Size wsize, const vector< Mat > & img_lst, vector< Mat > & gradient_lst, bool use_flip )
+{
+    HOGDescriptor hog;
+    hog.winSize = wsize;
+    Mat gray;
+    vector< float > descriptors;
+    for( size_t i = 0 ; i < img_lst.size(); i++ )
+    {
+        if ( img_lst[i].cols >= wsize.width && img_lst[i].rows >= wsize.height )
+        {
+            Rect r = Rect(( img_lst[i].cols - wsize.width ) / 2,
+                          ( img_lst[i].rows - wsize.height ) / 2,
+                          wsize.width,
+                          wsize.height);
+            cvtColor( img_lst[i](r), gray, COLOR_BGR2GRAY );
+            hog.compute( gray, descriptors, Size( 8, 8 ), Size( 0, 0 ) );
+            gradient_lst.push_back( Mat( descriptors ).clone() );
+            if ( use_flip )
+            {
+                flip( gray, gray, 1 );
+                hog.compute( gray, descriptors, Size( 8, 8 ), Size( 0, 0 ) );
+                gradient_lst.push_back( Mat( descriptors ).clone() );
+            }
+        }
+    }
+}
+
+
+
+
+
 
 void lbpExtractor(const Mat img,const Rect roi, Mat & feat)
 {

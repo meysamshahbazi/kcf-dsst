@@ -2,10 +2,12 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-#ifndef OPENCV_TRACKER_CSRT_SCALE_ESTIMATION
-#define OPENCV_TRACKER_CSRT_SCALE_ESTIMATION
+#ifndef __DSST_HPP__
+#define __DSST_HPP__
 
 #include <opencv2/highgui.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
 namespace cv
 {
 

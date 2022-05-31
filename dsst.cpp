@@ -2,10 +2,12 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-#include "precomp.hpp"
+// #include "precomp.hpp"
 
-#include "CSRTScaleEstimation.hpp"
-#include "CSRTUtils.hpp"
+#include "dsst.hpp"
+#include "utils.hpp"
+
+// #include "CSRTUtils.hpp"
 
 //Discriminative Scale Space Tracking
 namespace cv
@@ -388,7 +390,7 @@ public:
         for (int s = range.start; s < range.end; s++) {
             Size patch_sz = Size(static_cast<int>(current_scale * scale_factors[s] * base_target_sz.width),
                     static_cast<int>(current_scale * scale_factors[s] * base_target_sz.height));
-            Mat img_patch = get_subwindow(img, pos, patch_sz.width, patch_sz.height);
+            Mat img_patch = get_subwindow(img, pos, patch_sz.width, patch_sz.height,NULL);
             // imshow("patch2",img_patch);
             // waitKey(200);
             // img_patch.convertTo(img_patch, CV_32FC3); // #MEYSHA: we comment this line becuse aother convert is laready called inside get_features_hog_dsst()
@@ -501,7 +503,7 @@ Mat DSST::get_scale_features(
     int col_len = 0;
     Size patch_sz = Size(cvFloor(current_scale * scale_factors[0] * base_target_sz.width),
             cvFloor(current_scale * scale_factors[0] * base_target_sz.height));
-    Mat img_patch = get_subwindow(img, pos, patch_sz.width, patch_sz.height);
+    Mat img_patch = get_subwindow(img, pos, patch_sz.width, patch_sz.height,NULL);
     // img_patch.convertTo(img_patch, CV_32FC3);
     resize(img_patch, img_patch, Size(scale_model_sz.width, scale_model_sz.height),0,0,INTER_LINEAR);
     std::vector<Mat> hog;
